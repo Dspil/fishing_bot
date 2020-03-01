@@ -67,21 +67,38 @@ def add_bobber(img, bobber, scale = 1, theta = 0):
     bobber1 = bobber1.rotate(theta)
     bobber2 = np.array(bobber1)
     img2 = np.array(img)
-    img2[(img2.shape[0] - bobber2.shape[0]) // 2 : (img2.shape[0] - bobber2.shape[0]) // 2 + bobber2.shape[0], (img2.shape[1] - bobber2.shape[1]) // 2 : (img2.shape[1] - bobber2.shape[1]) // 2 + bobber2.shape[1]] *= (bobber2 < 10)
-    img2[(img2.shape[0] - bobber2.shape[0]) // 2 : (img2.shape[0] - bobber2.shape[0]) // 2 + bobber2.shape[0], (img2.shape[1] - bobber2.shape[1]) // 2 : (img2.shape[1] - bobber2.shape[1]) // 2 + bobber2.shape[1]] += bobber2
+    r = np.random.randint(0, img2.shape[0] - bobber2.shape[0])
+    c = np.random.randint(0, img2.shape[1] - bobber2.shape[1])
+    bobber3 = bobber2.astype(np.int64) + np.random.randint(-10, 10, bobber2.shape)
+    bobber3 += np.random.randint(-10, 10)
+    bobber3 *= bobber2 > 10
+    over = (bobber3 > 255)
+    bobber3 = bobber3 - over * bobber3 + over * 255
+    under = bobber3 < 0
+    bobber3 = (bobber3 - under * bobber3).astype(np.uint8)
+    img2[r:r + bobber3.shape[0], c:c + bobber3.shape[1]] *= (bobber3 < 10)
+    img2[r:r + bobber3.shape[0], c:c + bobber3.shape[1]] += bobber3
     return img2
 
 def create_dataset(bobbers, num = 10000):
     bar_length = 20
-    print("Creating Dataset:")
+    num //= 2
+    print("Creating Dataset...")
     for i in range(num):
         percentage = 100 * i // num + 1
         sys.stdout.write('\r[{}{}] {}%'.format('#' * (bar_length * percentage // 100), ' ' * (bar_length - bar_length * percentage // 100), percentage))
         sys.stdout.flush()
         bg = create_bg(base_color = np.random.randint(0,255,3))
-        test = add_bobber(bg, bobbers[np.random.randint(len(bobbers))], np.random.rand() + 0.5, np.random.rand() - 0.5 * 12)
-        plt.imsave(os.path.join('dataset', '{}.png'.format(i)), test)
-    print("\nDone")
+        plt.imsave(os.path.join('dataset', '{}.png'.format(i)), np.array(bg))
+        test = add_bobber(bg, bobbers[np.random.randint(len(bobbers))], np.random.rand() + 0.5, (np.random.rand() - 0.5) * 20)
+        plt.imsave(os.path.join('dataset', '{}.png'.format(i+num)), test)
+    print("\nCreating targets...")
+    with open("dataset/target.txt", 'w') as fhandle:
+        for i in range(num):
+            fhandle.write("0\n")
+        for i in range(num, 2 * num):
+            fhandle.write("1\n")
+    print("Done")
 
 if __name__ == "__main__":
     bobbers = []
