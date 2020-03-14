@@ -95,7 +95,7 @@ def add_bobber(img, bobber, scale = 1, theta = 0):
     r = np.random.randint(0, img2.shape[0] - bobber2.shape[0])
     c = np.random.randint(0, img2.shape[1] - bobber2.shape[1])
     bobber3 = bobber2.astype(np.int64) + np.random.randint(-2, 2, bobber2.shape)
-    bobber3 += np.random.randint(-30, 30)
+    bobber3 += np.random.randint(0, max(255 - bobber3.max(), 1))
     bobber3 *= bobber2 > 10
     over = (bobber3 > 255)
     bobber3 = bobber3 - over * bobber3 + over * 255
@@ -105,6 +105,35 @@ def add_bobber(img, bobber, scale = 1, theta = 0):
     img2[r:r + bobber3.shape[0], c:c + bobber3.shape[1]] += bobber3
     return img2
 
+
+def create_image_dataset(bobbers, num):
+    bar_length = 20
+    num //= 2
+    num_per_image = num // len(os.listdir('dataset_images'))
+    total = num_per_image * len(os.listdir('dataset_images'))
+    print("Creating Dataset...")
+    count = 0
+    fhandle = open("dataset/target.txt", 'w')
+    for i in os.listdir('dataset_images'):
+        img = (mpimg.imread('dataset_images/{}'.format(i))[:,:,:3] * 255).astype(np.uint8)
+        for j in range(num_per_image):
+            percentage = 50 * count // total + 1
+            sys.stdout.write('\r[{}{}] {}%'.format('#' * (bar_length * percentage // 100), ' ' * (bar_length - bar_length * percentage // 100), percentage))
+            sys.stdout.flush()
+            r = np.random.randint(0, img.shape[0] - 150)
+            c = np.random.randint(0, img.shape[1] - 150)
+            bg = img[r:r+150, c:c+150]
+            plt.imsave(os.path.join('dataset', '{}.png'.format(count)), bg)
+            test = add_bobber(bg, bobbers[np.random.randint(len(bobbers))], np.random.rand() + 0.5, (np.random.rand() - 0.5) * 20)
+            count += 1
+            plt.imsave(os.path.join('dataset', '{}.png'.format(count)), test)
+            count += 1
+            fhandle.write("1\n0\n")
+    fhandle.close()
+    print("\nDone")
+            
+
+        
 def create_dataset(bobbers, num):
     bar_length = 20
     num //= 3
@@ -192,5 +221,6 @@ if __name__ == "__main__":
             num2 = int(sys.argv[2])
         except:
             print("Usage:\npython3 create_dataset.py [<number of samples>] [<number of bg images>]")
-    create_dataset(bobbers, num)
-    create_extra(num, num2)
+    #create_dataset(bobbers, num)
+    #create_extra(num, num2)
+    create_image_dataset(bobbers, num)

@@ -27,9 +27,7 @@ def find_bobber(img, slide = 120):
         result[i // slide] = softmax(temp, axis = 1)[:, 0]
     return result
 
-def find_clicking_point(img, base_size = 50, starti = None, startj = None, endi = None, endj = None):
-    plt.imshow(img)
-    plt.show()
+def find_clicking_point(img, base_size = 25, starti = None, startj = None, endi = None, endj = None):
     if starti == None:
         starti, startj = 0,0
         endi, endj = img.shape[:2]
@@ -57,32 +55,37 @@ def find_clicking_point(img, base_size = 50, starti = None, startj = None, endi 
             out = model(torch.Tensor(nninput).float().to(device))
             temp = out.cpu().detach().numpy()[0]
             grades.append(softmax(temp)[0])
-            #print(grades[-1])
-            #plt.imshow(img2)
-            #plt.show()
             img2[i1:i2, j1:j2] = 0
         starti, endi, startj, endj = tests[np.argmax(grades)]
     img2[starti:endi,startj:endj] = img[starti:endi,startj:endj]
-    plt.imshow(img2)
-    plt.show()
-    
+    return (starti + endi) // 2, (startj + endj) // 2
     
     
 
-count = 0
-for i in os.listdir("images"):
-    count += 1
-    img = plt.imread("images/{}".format(i))[:,:,:3]
-    plt.imshow(img)
-    plt.show()
+def find_bobber_pos(img):
     result = find_bobber(img, 120)
-    plt.imshow(result, cmap='gray')
-    plt.show()
     f = np.argmax(result)
     columns = ((img.shape[1] - 150) // slide + 1)
     i,j = f // columns, f % columns
-    find_clicking_point(img[i * 120 : i * 120 + 150, j * 120 : j * 120 + 150])
-    #plt.imshow(img[i * 120 : i * 120 + 150, j * 120 : j * 120 + 150])
-    #plt.show()
+    i1, j1 = find_clicking_point(img[i * 120 : i * 120 + 150, j * 120 : j * 120 + 150])
+    return i * 120 + i1, j * 120 + j1
+
+    
+if __name__ == "__main__":
+    count = 0
+    for i in os.listdir("images"):
+        count += 1
+        img = plt.imread("images/{}".format(i))[:,:,:3]
+        plt.imshow(img)
+        plt.show()
+        result = find_bobber(img, 120)
+        plt.imshow(result, cmap='gray')
+        plt.show()
+        f = np.argmax(result)
+        columns = ((img.shape[1] - 150) // slide + 1)
+        i,j = f // columns, f % columns
+        find_clicking_point(img[i * 120 : i * 120 + 150, j * 120 : j * 120 + 150])
+        #plt.imshow(img[i * 120 : i * 120 + 150, j * 120 : j * 120 + 150])
+        #plt.show()
 
     
