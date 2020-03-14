@@ -26,6 +26,31 @@ def add_dot(x, base_color=None):
                 x[i][j] = ((bubble * aa + ab * x[i][j] * (1 - aa)) / (aa + ab * (1 - aa))).astype(np.int64)
     return x
 
+def random_bg(r = 150, c = 150, base_color = np.array([140, 185, 237], dtype = np.uint64), filters = 1, prob = 0.499):
+    x = np.zeros((2*r,2*c,3), dtype = np.int64)
+    x[0][0] = base_color
+    for i in range(2*r):
+        for j in range(2*c):
+            if j > 0:
+                if np.random.rand() < prob:
+                    x[i][j] = x[i][j-1]
+                    continue
+            if i > 0:
+                if np.random.rand() < prob / (1 - prob):
+                    x[i][j] = x[i-1][j]
+                    continue
+            x[i][j] = base_color + (np.random.rand(3) - 0.5) * 200
+    over = (x > 255)
+    x = x - over * x + over * 255
+    under = x < 0
+    x = (x - under * x).astype(np.uint8)
+    ys = rotate(x, angle = np.random.rand() * 360)
+    ys = ys[(ys.shape[0] - r) // 2: (ys.shape[0] - r) // 2 + r, (ys.shape[1] - c) // 2: (ys.shape[1] - c) // 2 + c]
+    ys = Image.fromarray(ys)
+    for i in range(filters):
+        ys = ys.filter(ImageFilter.SMOOTH)
+    return np.array(ys)
+
 
 def create_bg(r = 150, c = 150, base_color = np.array([140, 185, 237], dtype = np.uint64), dots_ratio = 0.1, filters = 1):
     prob = 0.5
@@ -69,8 +94,8 @@ def add_bobber(img, bobber, scale = 1, theta = 0):
     img2 = np.array(img)
     r = np.random.randint(0, img2.shape[0] - bobber2.shape[0])
     c = np.random.randint(0, img2.shape[1] - bobber2.shape[1])
-    bobber3 = bobber2.astype(np.int64) + np.random.randint(-10, 10, bobber2.shape)
-    bobber3 += np.random.randint(-10, 10)
+    bobber3 = bobber2.astype(np.int64) + np.random.randint(-2, 2, bobber2.shape)
+    bobber3 += np.random.randint(-30, 30)
     bobber3 *= bobber2 > 10
     over = (bobber3 > 255)
     bobber3 = bobber3 - over * bobber3 + over * 255
@@ -80,25 +105,73 @@ def add_bobber(img, bobber, scale = 1, theta = 0):
     img2[r:r + bobber3.shape[0], c:c + bobber3.shape[1]] += bobber3
     return img2
 
-def create_dataset(bobbers, num = 10000):
+def create_dataset(bobbers, num):
     bar_length = 20
-    num //= 2
+    num //= 3
     print("Creating Dataset...")
     for i in range(num):
         percentage = 100 * i // num + 1
         sys.stdout.write('\r[{}{}] {}%'.format('#' * (bar_length * percentage // 100), ' ' * (bar_length - bar_length * percentage // 100), percentage))
         sys.stdout.flush()
-        bg = create_bg(base_color = np.random.randint(0,255,3))
-        plt.imsave(os.path.join('dataset', '{}.png'.format(i)), np.array(bg))
+        bg = create_bg(base_color = np.random.randint(0,255,3), dots_ratio = np.random.random() * 0.1, filters = np.random.randint(0, 4))
+        if np.random.random() < 0.1:
+            bg = np.array(bg)
+            r = np.random.randint(0, bg.shape[0], 2)
+            c = np.random.randint(0, bg.shape[1], 2)
+            i1, i2 = min(r), max(r)
+            j1, j2 = min(c), max(c)
+            bg[i1:i2, j1:j2] = 0
+        plt.imsave(os.path.join('dataset', '{}.png'.format(3*i)), np.array(bg))
         test = add_bobber(bg, bobbers[np.random.randint(len(bobbers))], np.random.rand() + 0.5, (np.random.rand() - 0.5) * 20)
-        plt.imsave(os.path.join('dataset', '{}.png'.format(i+num)), test)
+        plt.imsave(os.path.join('dataset', '{}.png'.format(3*i+1)), test)
+        bg2 = create_bg(base_color = np.random.randint(0,255,3))
+        if np.random.random() < 0.1:
+            bg2 = np.array(bg2)
+            r = np.random.randint(0, bg2.shape[0], 2)
+            c = np.random.randint(0, bg2.shape[1], 2)
+            i1, i2 = min(r), max(r)
+            j1, j2 = min(c), max(c)
+            bg2[i1:i2, j1:j2] = 0
+        test2 = add_bobber(bg2, bobbers[np.random.randint(len(bobbers))], np.random.rand() + 0.5, (np.random.rand() - 0.5) * 20)
+        plt.imsave(os.path.join('dataset', '{}.png'.format(3*i+2)), test2)
+        """randombg = add_bobber(randombg, bobbers[np.random.randint(len(bobbers))], np.random.rand() + 0.5, (np.random.rand() - 0.5) * 20)
+        plt.imsave(os.path.join('dataset', '{}.png'.format(4*i+2)), randombg)"""
+        
     print("\nCreating targets...")
     with open("dataset/target.txt", 'w') as fhandle:
         for i in range(num):
-            fhandle.write("0\n")
-        for i in range(num, 2 * num):
-            fhandle.write("1\n")
+            fhandle.write("1\n0\n0\n")
     print("Done")
+
+def create_extra(prev, num2):
+    num = num2 // len(os.listdir('bgs'))
+    count = (prev // 3) * 3
+    start = count
+    bar_length = 20
+    fhandle = open("dataset/target.txt", 'a')
+    print("Creating extra bg's...")
+    for i in os.listdir('bgs'):
+        img = mpimg.imread('bgs/{}'.format(i))
+        img = img[:img.shape[0]//3,:,:3]
+        for j in range(num):
+            percentage = 100 * (count - start) // num2 + 1
+            sys.stdout.write('\r[{}{}] {}%'.format('#' * (bar_length * percentage // 100), ' ' * (bar_length - bar_length * percentage // 100), percentage))
+            sys.stdout.flush()
+            r = np.random.randint(0, img.shape[0] - 150)
+            c = np.random.randint(0, img.shape[1] - 150)
+            bg = img[r:r+150, c:c+150]
+            bg += (np.random.rand(150, 150, 3) - 0.5) * 2 * np.random.random() * 0.078 + (np.random.random() - 0.5) * 0.1
+            over = (bg > 1)
+            bg = bg - over * bg + over
+            under = bg < 0
+            bg = (bg - under * bg)
+            plt.imsave(os.path.join('dataset', '{}.png'.format(count)), bg)
+            count += 1
+            fhandle.write("1\n")
+    fhandle.close()
+    print("\nDone")
+        
+
 
 if __name__ == "__main__":
     bobbers = []
@@ -106,14 +179,18 @@ if __name__ == "__main__":
         bobbers.append((mpimg.imread(os.path.join('bobbers', i)) * 255).astype(np.uint8)[:,:,:3])
         bobbers[-1] = bobbers[-1] = bobbers[-1] * (bobbers[-1] < 250)
     if len(sys.argv) < 2:
-        num = 10000
+        num = 9000
     else:
         try:
             num = int(sys.argv[1])
         except:
-            print("Usage:\npython3 create_dataset.py [<number of samples>]")
+            print("Usage:\npython3 create_dataset.py [<number of samples>] [<number of bg images>]")
+    if len(sys.argv) < 3:
+        num2 = 3000
+    else:
+        try:
+            num2 = int(sys.argv[2])
+        except:
+            print("Usage:\npython3 create_dataset.py [<number of samples>] [<number of bg images>]")
     create_dataset(bobbers, num)
-
-
-
-
+    create_extra(num, num2)

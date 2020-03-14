@@ -1,15 +1,16 @@
 from matplotlib import pyplot as plt
 from matplotlib import image as mpimg
 import os
-from torch.utils.data import Dataset, Dataloader
+import numpy as np
+import torch
+from torch.utils.data import Dataset, DataLoader
 
 class BobberDataset(Dataset):
 
     def __init__(self, root_dir, indices):
         self.root_dir = root_dir
         self.indices = indices
-        with open(os.path.join(root_dir, "target.txt"), 'r') as fhandle:
-            labels = map(int, fhandle.read().split('\n')[:-1])
+        labels = np.genfromtxt(os.path.join(root_dir, "target.txt"))
         self.labels = [labels[i] for i in indices]
 
 
@@ -18,15 +19,17 @@ class BobberDataset(Dataset):
 
 
     def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-        bobbers = np.array([mpimg.imread(os.path.join(root_dir, "{}.png".format(i))) for i in idx])
-        return self.bobbers[idx]
+        bobber = mpimg.imread(os.path.join(self.root_dir, "{}.png".format(self.indices[idx])))[:,:,:3]
+        ret = np.zeros((3, bobber.shape[0], bobber.shape[1]))
+        ret[0] = bobber[:,:,0]
+        ret[1] = bobber[:,:,1]
+        ret[2] = bobber[:,:,2]
+        return ret, self.labels[idx]
 
 
 
 def set_loaders(seed = 1, training_set_size = 0.6, validation_set_size = 0.2, test_set_size = 0.2, batch_size = 50):
-    num = len(os.listdir('dataset'))
+    num = len(os.listdir('dataset')) - 1
     indices = np.arange(num)
     np.random.seed(seed)
     np.random.shuffle(indices)
