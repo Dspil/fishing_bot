@@ -9,10 +9,10 @@ from matplotlib import pyplot as plt
 control = True
 mymouse = mouse.Controller()
 mykeyboard = keyboard.Controller()
-time_left = 1000
+time_left = np.inf
 sleep_time = 1.5
 nn_time = 0.5
-brightness_threshold = 0.1
+brightness_threshold = 0.035
 frame_width = 60
 
 def main_thread():
@@ -22,6 +22,8 @@ def main_thread():
     with mss.mss() as sct:
         monitor = sct.monitors[0]
         while time() - start < time_left and control:
+            mymouse.release(mouse.Button.right)
+            sleep(0.1)
             mymouse.position = (monitor['width'], monitor['height'])
             sleep(0.1)
             mykeyboard.type('/')
@@ -32,15 +34,21 @@ def main_thread():
             observe_time = time()
             frame = img[bobber_monitor['top'] : bobber_monitor['top'] + bobber_monitor['height'], bobber_monitor['left'] : bobber_monitor['left'] + bobber_monitor['width']]
             base_brightness = frame.sum()
+            flag = False
             while time() - observe_time < 17 - nn_time - sleep_time and control:
                 frame = (np.flip(np.array(sct.grab(bobber_monitor))[:,:,:3].astype(np.uint8), axis = 2) / 255)
                 brightness = frame.sum()
                 if (brightness - base_brightness) / base_brightness > brightness_threshold:
+                    flag = True
                     break
-            sleep(0.8)
-            if control:
-                mymouse.position = (x, y)
-                mymouse.click(mouse.Button.right, 1)
+            if flag:
+                sleep(0.5)
+                if control:
+                    mymouse.release(mouse.Button.right)
+                    sleep(0.1)
+                    mymouse.position = (x, y)
+                    sleep(1)
+                    mymouse.click(mouse.Button.right, 1)
             sleep(sleep_time * 2)
             
         
