@@ -19,3 +19,7 @@ This neural network was trained by a computer generated dataset. Each positive i
   
   * Danai Efstathiou ([danaiefst](https://github.com/danaiefst))
   * Dionysios Spiliopoulos ([Dspil](https://github.com/Dspil))
+
+## Disclaimer
+
+This bot was not used for cheating but purely for research purposes.
