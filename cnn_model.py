@@ -61,8 +61,14 @@ class ConvNet(nn.Module):
             # nn.BatchNorm2d(512),
             nn.ReLU(),
         )
-        self.layer7 = nn.Sequential(
-            nn.Linear(3072, 2),
+        self.linear_layer1 = nn.Sequential (
+            nn.Linear(3072, 256),
+            # nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+        )
+        self.linear_layer2 = nn.Sequential(
+            nn.Linear(256, 2),
             # nn.BatchNorm1d(128),
             nn.Sigmoid(),
         )
@@ -77,5 +83,6 @@ class ConvNet(nn.Module):
         out = self.layer5(out)
         out = self.layer6(out)
         out = out.reshape(out.size(0), -1)
-        out = self.layer7(out)
+        out = self.linear_layer1(out)
+        out = self.linear_layer2(out)
         return out
