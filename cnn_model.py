@@ -70,7 +70,7 @@ class ConvNet(nn.Module):
         self.linear_layer2 = nn.Sequential(
             nn.Linear(256, 2),
             # nn.BatchNorm1d(128),
-            nn.Sigmoid(),
+            # nn.Sigmoid(),
         )
         # self.layer8 = nn.Sequential(nn.Linear(256, 2))
 
